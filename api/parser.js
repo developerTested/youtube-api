@@ -65,14 +65,23 @@ export const GetYoutubeInitData = async (url) => {
     }
 };
 
+/**
+ * Search Page
+ * @param {*} keyword 
+ * @param {*} withPlaylist 
+ * @param {*} limit 
+ * @param {*} options 
+ * @returns 
+ */
 export const GetListByKeyword = async (
     keyword,
     withPlaylist = false,
-    limit = 0,
+    limit = 30,
     options = []
 ) => {
 
     let endpoint = `${youtubeEndpoint}/results?search_query=${keyword}`;
+
     try {
         if (Array.isArray(options) && options.length > 0) {
             const type = options.find((z) => z.type);
@@ -116,10 +125,14 @@ export const GetListByKeyword = async (
 
         const page = await GetYoutubeInitData(endpoint);
 
+        // return page;
+
         const sectionListRenderer = await page.initData.contents
             .twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer;
 
         let contToken = {};
+
+        const results = [];
 
         let items = [];
 
@@ -132,7 +145,123 @@ export const GetListByKeyword = async (
                 content.itemSectionRenderer.contents.forEach((item) => {
                     if (item.channelRenderer) {
                         let channelRenderer = item.channelRenderer;
-                        items.push(parseChannelRender(channelRenderer));
+                        results.push(parseChannelRender(channelRenderer));
+                    } else if (item.shelfRenderer) {
+
+                        const json = item.shelfRenderer;
+
+                        if (json.content.horizontalListRenderer) {
+                            const itemList = json.content.horizontalListRenderer.items;
+                            const sub = [];
+                            itemList.map((x) => {
+                                if (x.gridVideoRenderer) {
+                                    sub.push(gridParser(x, channel));
+                                } else if (x.gridPlaylistRenderer) {
+                                    sub.push(playListParser(x));
+                                } else if (x.gridChannelRenderer) {
+                                    sub.push(channelParser(x.gridChannelRenderer))
+                                } else if (x.postRenderer) {
+                                    sub.push(parsePostRenderer(x.postRenderer))
+                                }
+                            })
+
+                            results.push({ title: json.title.simpleText, videos: sub });
+
+                        } else if (json.content.verticalListRenderer) {
+                            const itemList = json.content.verticalListRenderer.items;
+
+                            if (!itemList) {
+                                return [];
+                            }
+
+                            const sub = [];
+
+                            if (itemList) {
+                                itemList.map((x) => {
+                                    if (x.videoRenderer) {
+                                        sub.push(parseVideoRender(x.videoRenderer));
+                                    } else if (x.gridVideoRenderer) {
+                                        sub.push(gridParser(x, channel));
+                                    } else if (x.gridPlaylistRenderer) {
+                                        sub.push(playListParser(x));
+                                    } else if (x.gridChannelRenderer) {
+                                        sub.push(channelParser(x.gridChannelRenderer))
+                                    }
+                                })
+                            }
+
+                            results.push({ title: json.title.simpleText, videos: sub });
+
+                        } else if (json.content.expandedShelfContentsRenderer) {
+
+                            const itemList = json.content.expandedShelfContentsRenderer.items;
+
+                            const sub = []
+                            itemList.map((x) => {
+
+                                if (x.channelRenderer) {
+                                    sub.push(channelParser(x.channelRenderer))
+                                }
+
+                            });
+
+                            results.push({ title: json.title.simpleText, videos: sub });
+                        }
+
+
+                    } else if (item.reelShelfRenderer) {
+
+                        const json = item.reelShelfRenderer;
+                        const reels = [];
+
+                        if (json.items) {
+                            json.items.map((x) => {
+                                const json = x.reelItemRenderer;
+
+                                reels.push(shortVideoParser(json))
+                            });
+                        }
+
+                        results.push({ title: json.title.simpleText, videos: reels });
+
+                    } else if (item.playlistRenderer) {
+
+                        const json = item.playlistRenderer;
+
+                        const childVideos = []
+
+                        if (Array.isArray(json.videos)) {
+                            json.videos.map((v) => {
+                                const child = v.childVideoRenderer;
+
+                                childVideos.push({
+                                    id: child.videoId,
+                                    type: "video",
+                                    title: child.title.simpleText,
+                                    length: child.lengthText.simpleText
+                                })
+                            })
+                        }
+
+                        let thumbnail = []
+                        if (Array.isArray(json.thumbnails)) {
+                            thumbnail = json.thumbnails[0].thumbnails;
+                        } else {
+                            thumbnail = json.thumbnail.thumbnails;
+                        }
+
+                        const playlist = {
+                            id: json.playlistId,
+                            type: "playlist",
+                            thumbnail: thumbnail,
+                            title: json.title.simpleText,
+                            videos: childVideos,
+                            videoCount: json.videoCount,
+                            isLive: false
+                        }
+
+                        results.push({ title: json.title.simpleText, videos: playlist });
+
                     } else {
                         let videoRender = item.videoRenderer;
                         let playListRender = item.playlistRenderer;
@@ -159,7 +288,7 @@ export const GetListByKeyword = async (
             }
         });
 
-        const itemList = items.filter((x) => x.id != null)
+        const itemList = results;
 
         const apiToken = await page.apiToken;
         const context = await page.context;
@@ -175,6 +304,13 @@ export const GetListByKeyword = async (
     }
 };
 
+/**
+ * Next page to load, comments, replies, channels, suggestions, search results etc
+ * @param {*} nextPage 
+ * @param {*} withPlaylist 
+ * @param {*} limit 
+ * @returns 
+ */
 export const nextPage = async (nextPage, withPlaylist = false, limit = 0) => {
     const endpoint = `${youtubeEndpoint}/youtubei/v1/search?key=${nextPage.nextPageToken}`;
     try {
@@ -219,8 +355,14 @@ export const nextPage = async (nextPage, withPlaylist = false, limit = 0) => {
     }
 };
 
+/**
+ * Get Playlist from an ID
+ * @param {*} playlistId 
+ * @param {*} limit 
+ * @returns 
+ */
 export const GetPlaylistData = async (playlistId, limit = 0) => {
-    const endpoint = await `${youtubeEndpoint}/playlist?list=${playlistId}`;
+    const endpoint = `${youtubeEndpoint}/playlist?list=${playlistId}`;
     try {
         const page = await GetYoutubeInitData(endpoint);
         const sectionListRenderer = await page.initData;
@@ -320,6 +462,11 @@ export const GetSuggestData = async (limit = 0) => {
     }
 };
 
+/**
+ * Get Channel from an ID
+ * @param {*} channelId 
+ * @returns 
+ */
 export const GetChannelById = async (channelId) => {
 
     const parseChannelId = channelId.indexOf('@') !== -1 ? channelId : `@${channelId}`;
@@ -491,7 +638,11 @@ export const GetChannelById = async (channelId) => {
     }
 };
 
-
+/**
+ * Get channel full details
+ * @param {*} nextPage 
+ * @returns object
+ */
 const getChannelFullDescription = async (nextPage) => {
     const endpoint = `${youtubeEndpoint}/youtubei/v1/browse?prettyPrint=true`;
 
@@ -547,6 +698,11 @@ const getChannelFullDescription = async (nextPage) => {
     }
 }
 
+/**
+ * Get Video Details with player, comments, replies, suggestions
+ * @param {*} videoId 
+ * @returns object
+ */
 export const GetVideoDetails = async (videoId) => {
     const endpoint = `${youtubeEndpoint}/watch?v=${videoId}`;
     try {
@@ -613,7 +769,7 @@ export const GetVideoDetails = async (videoId) => {
             title: channelInfo.owner.videoOwnerRenderer.title.runs[0].text,
             url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
             subscriber: channelInfo.owner.videoOwnerRenderer.subscriberCountText.simpleText,
-            avatar: channelInfo.owner.videoOwnerRenderer.thumbnail.thumbnails,
+            avatar: channelInfo.owner.videoOwnerRenderer.thumbnail.thumbnails?.pop(),
         }
 
         const player = getVideoData(playerData);
@@ -640,6 +796,11 @@ export const GetVideoDetails = async (videoId) => {
     }
 };
 
+/**
+ * Get Comments
+ * @param {*} nextPage 
+ * @returns object
+ */
 export const getComments = async (nextPage) => {
     const endpoint = `${youtubeEndpoint}/youtubei/v1/next?key=${nextPage.nextPageToken}`;
     const items = [];
@@ -753,6 +914,11 @@ export const getComments = async (nextPage) => {
     }
 };
 
+/**
+ * Get More suggestions
+ * @param {*} nextPage 
+ * @returns 
+ */
 export const getMoreSuggestions = async (nextPage) => {
     const items = [];
 
@@ -793,6 +959,11 @@ export const getMoreSuggestions = async (nextPage) => {
     }
 }
 
+/**
+ * Get more comments
+ * @param {*} nextPage 
+ * @returns 
+ */
 export const getMoreComments = async (nextPage) => {
 
     if (!nextPage?.nextPageToken) return Promise.resolve(nextPage);
@@ -908,6 +1079,11 @@ export const getMoreComments = async (nextPage) => {
     }
 };
 
+/**
+ * Get comments with replies
+ * @param {*} nextPage 
+ * @returns 
+ */
 async function getCommentReplies(nextPage) {
     const endpoint = `${youtubeEndpoint}/youtubei/v1/next?key=${nextPage.nextPageToken}`;
     const items = [];
@@ -1027,7 +1203,7 @@ async function getCommentReplies(nextPage) {
 }
 
 /**
- * 
+ * AutoComplete Search
  * @param {*} json 
  * @returns []
  */
@@ -1052,6 +1228,11 @@ export async function getAutoCompleteSearch(keyword) {
     }
 }
 
+/**
+ * Video parser
+ * @param {*} json 
+ * @returns 
+ */
 export const VideoRender = (json) => {
 
     try {
@@ -1113,6 +1294,11 @@ export const VideoRender = (json) => {
     }
 };
 
+/**
+ * Compact Video Parser
+ * @param {*} json 
+ * @returns 
+ */
 export const compactVideoRenderer = (json) => {
     const compactVideoRendererJson = json.compactVideoRenderer;
 
@@ -1175,60 +1361,19 @@ export const compactVideoRenderer = (json) => {
     return result;
 };
 
-
-export async function getTrending() {
-    const page = await GetYoutubeInitData(apiList['trending']);
-
-    try {
-
-        const contentHeader = await page.initData?.header?.c4TabbedHeaderRenderer;
-        const results = await page.initData.contents.twoColumnBrowseResultsRenderer.tabs[0].tabRenderer.content;
-        const items = results.sectionListRenderer.contents
-            .filter((x) => x.itemSectionRenderer)
-            .map((z) => z.itemSectionRenderer.contents).flat();
-
-        let itemList = [];
-        const otherItems = [];
-        const shortsList = [];
-
-        items.length && items.map((x) => {
-
-            if (x.shelfRenderer) {
-                itemList = parseTrending(x.shelfRenderer.content);
-            } else if (x.reelShelfRenderer) {
-                const shortsResult = x.reelShelfRenderer.items;
-                shortsResult.map(({ reelItemRenderer: json }) => shortsList.push({
-                    id: json.videoId,
-                    type: "reel",
-                    thumbnail: json.thumbnail.thumbnails[0],
-                    title: json.headline.simpleText,
-                }));
-            } else {
-                return [];
-            }
-
-        })
-
-        return {
-            title: contentHeader?.title,
-            avatar: contentHeader?.avatar?.thumbnails[0],
-            items: itemList,
-            shorts: shortsList,
-            otherItems,
-        };
-
-
-    } catch (error) {
-        return await Promise.reject(error);
-    }
-}
-
+/**
+ * Get pages: trending, music, games, movies, fashion, learning, sports, news, live stream etc
+ * @param {*} name 
+ * @returns 
+ */
 export async function getFeed(name) {
     const endpoint = name ? apiList[name] : youtubeEndpoint;
 
     const page = await GetYoutubeInitData(endpoint);
 
-    const contentHeader = await page.initData?.header?.c4TabbedHeaderRenderer || page.initData?.header?.carouselHeaderRenderer;
+    const contentHeader = await page.initData?.header?.pageHeaderRenderer || page.initData?.header?.carouselHeaderRenderer;
+
+    const feedThumbnail = page.initData.header?.pageHeaderRenderer?.content?.pageHeaderViewModel?.image?.contentPreviewImageViewModel?.image?.sources?.pop();
 
     let headerItems = {}
 
@@ -1262,12 +1407,10 @@ export async function getFeed(name) {
             return headerItems;
         });
     } else {
-
-
         headerItems = {
-            title: contentHeader?.title,
+            title: contentHeader?.pageTitle,
             subtitle: contentHeader?.subscriberCountText?.runs?.map((x) => x.text)?.join(''),
-            avatar: contentHeader?.avatar?.thumbnails[0],
+            avatar: feedThumbnail,
         }
 
     }
@@ -1389,10 +1532,12 @@ export async function getFeed(name) {
     return await Promise.resolve({
         ...headerItems,
         items: feedResults,
-
     });
 }
 
+/**
+ * Get Home feed
+ */
 export const GetHomeFeed = async () => {
     const page = await GetYoutubeInitData(youtubeEndpoint);
 
@@ -1402,20 +1547,22 @@ export const GetHomeFeed = async () => {
 
     const chips = [];
 
-    const options = await richGridRenderer?.header?.feedFilterChipBarRenderer?.contents ?? [];
+    const options = richGridRenderer?.header?.feedFilterChipBarRenderer?.contents ?? [];
 
-    await options.length && Array.isArray(options) && options.forEach((item) => {
-        const chipItem = item?.chipCloudChipRenderer;
+    if (Array.isArray(options)) {
+        options.forEach((item) => {
+            const chipItem = item?.chipCloudChipRenderer;
 
-        const chipToken = chipItem?.navigationEndpoint?.continuationCommand?.token ?? null;
+            const chipToken = chipItem?.navigationEndpoint?.continuationCommand?.token ?? null;
 
-        const chipText = chipItem.text?.runs.map((x) => x.text).join('') ?? null;
+            const chipText = chipItem.text?.runs.map((x) => x.text).join('') ?? null;
 
-        chips.push({
-            title: chipText,
-            nextPageToken: chipToken,
+            chips.push({
+                title: chipText,
+                nextPageToken: chipToken,
+            });
         });
-    });
+    }
 
     const itemList = []
 
@@ -1423,22 +1570,33 @@ export const GetHomeFeed = async () => {
 
     const items = richGridRenderer.contents;
 
-    items.map((x) => {
+    if (items) {
+        items.map((x) => {
 
-        if (x.continuationItemRenderer) {
-            contToken = x.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
-        } else {
-            itemList.push(richSessionParse(x));
-        }
-    });
+            if (x.continuationItemRenderer) {
+                contToken = x.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
+            } else {
+                const richSectionRenderer = richSessionParse(x);
+
+                if (richSectionRenderer.length) {
+                    itemList.push(richSectionRenderer);
+                }
+            }
+        });
+    }
+
+    if (!itemList.length) {
+        return new ApiError(400, "No data!")
+    }
 
     const newList = itemList.filter((x) => x);
 
     return await Promise.resolve({ items: newList, chips, nextPageToken: contToken });
-
 };
 
-
+/**
+ * Get short videos from home feed
+ */
 export const GetShortVideo = async () => {
     const page = await GetYoutubeInitData(youtubeEndpoint);
     const shortResult =
@@ -1462,7 +1620,11 @@ export const GetShortVideo = async () => {
     }));
 };
 
-
+/**
+ * Parer for Video
+ * @param {*} response 
+ * @returns 
+ */
 function getVideoData(response) {
 
     if (!response) {
@@ -1510,17 +1672,6 @@ function getVideoData(response) {
 
     } catch (error) {
         return {};
-    }
-}
-
-
-/**
- * Helper function for parser
- */
-
-function parseComments(response) {
-    if (!response) {
-        return response;
     }
 }
 
@@ -1621,33 +1772,7 @@ export function parseVideoRender(response) {
 }
 
 /**
- * Parse Short Video
- * @param {*} response 
- * @returns 
- */
-function parseShortVideo(results) {
-
-    try {
-        const shortResponse = results.contents
-            .map((z) => z.richItemRenderer)
-            .map((y) => y.content.reelItemRenderer);
-
-        const shorts = shortResponse.map((json) => ({
-            id: json.videoId,
-            type: "reel",
-            thumbnail: json.thumbnail.thumbnails[0],
-            title: json.headline.simpleText,
-        }));
-
-        return shorts;
-
-    } catch (error) {
-        return {};
-    }
-}
-
-/**
- * 
+ * Channel Parser
  */
 function parseChannelRender(response) {
 
@@ -1659,7 +1784,7 @@ function parseChannelRender(response) {
             type: "channel",
             title: response.title.simpleText,
             url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
-            avatar: response.thumbnail.thumbnails,
+            avatar: response.thumbnail.thumbnails?.pop(),
             description: response.descriptionSnippet.runs.map((x) => x.text).join(''),
             subscriber: response.videoCountText.simpleText,
         };
