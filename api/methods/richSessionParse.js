@@ -55,7 +55,6 @@ export default function richSessionParse(json) {
         list = json;
     }
 
-
     const newList = Array.isArray(list) ? list.filter((a) => a) : list;
 
     return newList;

@@ -34,7 +34,7 @@ export default compactVideoRenderer = (json) => {
     const viewsCount = isLive ? compactVideoRendererJson.shortViewCountText?.runs?.map((x) => x.text).join('') : compactVideoRendererJson.shortViewCountText?.simpleText;
 
     const channelUrl = compactVideoRendererJson.shortBylineText.runs[0].navigationEndpoint.commandMetadata.webCommandMetadata.url;
-    const channelAvatar = compactVideoRendererJson.channelThumbnail.thumbnails[0];
+    const channelAvatar = compactVideoRendererJson.channelThumbnail.thumbnails?.pop();
 
     const channel = {
         id: channelUrl ? channelUrl?.replace('/@', '') : '',

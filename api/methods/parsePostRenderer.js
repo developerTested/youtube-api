@@ -6,7 +6,7 @@ export default function parsePostRenderer(json) {
 
 
     const channelUrl = json.authorEndpoint.commandMetadata.webCommandMetadata.url;
-    const channelAvatar = json.authorThumbnail.thumbnails;
+    const channelAvatar = json.authorThumbnail.thumbnails?.pop();
 
     const channel = {
         id: channelUrl ? channelUrl?.replace('/@', '') : '',
