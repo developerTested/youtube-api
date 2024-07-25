@@ -47,6 +47,17 @@ export default function videoRenderer(response) {
             verified = true;
         }
 
+        let artist = false;
+        if (
+            response.ownerBadges &&
+            response.ownerBadges.length > 0 &&
+            response.ownerBadges[0].metadataBadgeRenderer &&
+            response.ownerBadges[0].metadataBadgeRenderer.style ===
+            "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+        ) {
+            artist = true;
+        }
+
         const channelUrl = response.ownerText.runs[0].navigationEndpoint.commandMetadata.webCommandMetadata.url;
         const channelAvatar = response.channelThumbnailSupportedRenderers.channelThumbnailWithLinkRenderer.thumbnail.thumbnails[0];
 
@@ -56,6 +67,7 @@ export default function videoRenderer(response) {
             url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
             avatar: channelAvatar,
             verified,
+            artist,
         };
 
         const hasDescription = response.hasOwnProperty('detailedMetadataSnippets');

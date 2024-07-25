@@ -125,8 +125,6 @@ export const GetListByKeyword = async (
 
         const page = await GetYoutubeInitData(endpoint);
 
-        // return page;
-
         const sectionListRenderer = await page.initData.contents
             .twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer;
 
@@ -143,7 +141,9 @@ export const GetListByKeyword = async (
                         .continuationCommand.token;
             } else if (content.itemSectionRenderer) {
                 content.itemSectionRenderer.contents.forEach((item) => {
-                    if (item.channelRenderer) {
+                    if (item.videoRenderer) {
+                        results.push(parseVideoRender(item.videoRenderer));
+                    } else if (item.channelRenderer) {
                         let channelRenderer = item.channelRenderer;
                         results.push(parseChannelRender(channelRenderer));
                     } else if (item.shelfRenderer) {
@@ -734,7 +734,6 @@ export const GetVideoDetails = async (videoId) => {
             isLive = true;
         }
 
-
         const likeContainer = videoInfo?.videoActions?.menuRenderer?.topLevelButtons[0]?.segmentedLikeDislikeButtonViewModel;
 
         const likeCount = likeContainer?.likeButtonViewModel?.likeButtonViewModel?.toggleButtonViewModel?.toggleButtonViewModel?.defaultButtonViewModel?.buttonViewModel?.title ||
@@ -762,14 +761,40 @@ export const GetVideoDetails = async (videoId) => {
 
         const suggestionNextPage = { nextPageToken: apiToken, nextPageContext: suggestionContext }
 
-        const channelUrl = channelInfo.owner.videoOwnerRenderer.navigationEndpoint.commandMetadata.webCommandMetadata.url;
+        const channelOwner = channelInfo.owner.videoOwnerRenderer;
+        const channelUrl = channelOwner.navigationEndpoint.commandMetadata.webCommandMetadata.url;
+
+        let artist = false;
+        if (
+            channelOwner.badges &&
+            channelOwner.badges.length > 0 &&
+            channelOwner.badges[0].metadataBadgeRenderer &&
+            channelOwner.badges[0].metadataBadgeRenderer.style ===
+            "OFFICIAL_ARTIST_BADGE"
+        ) {
+            artist = true;
+        }
+
+        
+        let verified = false;
+        if (
+            channelOwner.badges &&
+            channelOwner.badges.length > 0 &&
+            channelOwner.badges[0].metadataBadgeRenderer &&
+            channelOwner.badges[0].metadataBadgeRenderer.style ===
+            "BADGE_STYLE_TYPE_VERIFIED"
+        ) {
+            verified = true;
+        }
 
         const channel = {
             id: channelUrl ? channelUrl?.replace('/@', '') : '',
-            title: channelInfo.owner.videoOwnerRenderer.title.runs[0].text,
+            title: channelOwner.title.runs[0].text,
             url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
-            subscriber: channelInfo.owner.videoOwnerRenderer.subscriberCountText.simpleText,
-            avatar: channelInfo.owner.videoOwnerRenderer.thumbnail.thumbnails?.pop(),
+            subscriber: channelOwner.subscriberCountText.simpleText,
+            avatar: channelOwner.thumbnail.thumbnails?.pop(),
+            verified,
+            artist,
         }
 
         const player = getVideoData(playerData);
@@ -1132,8 +1157,6 @@ async function getCommentReplies(nextPage) {
 
         const itemList = getItemList.filter((x => x.payload.commentEntityPayload));
 
-        // return itemList;
-
         for (const conitem of itemList) {
 
             const commentThread = conitem.payload.commentEntityPayload;
@@ -1332,6 +1355,17 @@ export const compactVideoRenderer = (json) => {
         verified = true;
     }
 
+    let artist = false;
+    if (
+        compactVideoRendererJson.ownerBadges &&
+        compactVideoRendererJson.ownerBadges.length > 0 &&
+        compactVideoRendererJson.ownerBadges[0].metadataBadgeRenderer &&
+        compactVideoRendererJson.ownerBadges[0].metadataBadgeRenderer.style ===
+        "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+    ) {
+        artist = true;
+    }
+
     const viewsCount = isLive ? compactVideoRendererJson.shortViewCountText?.runs?.map((x) => x.text).join('') : compactVideoRendererJson.shortViewCountText?.simpleText;
 
     const channelUrl = compactVideoRendererJson.shortBylineText.runs[0].navigationEndpoint.commandMetadata.webCommandMetadata.url;
@@ -1343,6 +1377,7 @@ export const compactVideoRenderer = (json) => {
         url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
         avatar: channelAvatar,
         verified,
+        artist,
     };
 
     const result = {
@@ -1729,6 +1764,18 @@ export function parseVideoRender(response) {
             verified = true;
         }
 
+        let artist = false;
+
+        if (
+            response.ownerBadges &&
+            response.ownerBadges.length > 0 &&
+            response.ownerBadges[0].metadataBadgeRenderer &&
+            response.ownerBadges[0].metadataBadgeRenderer.style ===
+            "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
+        ) {
+            artist = true;
+        }
+
         const channelUrl = response.ownerText.runs[0].navigationEndpoint.commandMetadata.webCommandMetadata.url;
         const channelAvatar = response.channelThumbnailSupportedRenderers.channelThumbnailWithLinkRenderer.thumbnail.thumbnails[0];
 
@@ -1738,6 +1785,7 @@ export function parseVideoRender(response) {
             url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
             avatar: channelAvatar,
             verified,
+            artist,
         };
 
         const hasDescription = response.hasOwnProperty('detailedMetadataSnippets');
