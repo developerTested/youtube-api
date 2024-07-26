@@ -205,7 +205,7 @@ export const GetListByKeyword = async (
 
                             });
 
-                            results.push({ title: json.title.simpleText, videos: sub });
+                            results.push({ title: json?.title?.simpleText, videos: sub });
                         }
 
 
@@ -222,7 +222,7 @@ export const GetListByKeyword = async (
                             });
                         }
 
-                        results.push({ title: json.title.simpleText, videos: reels });
+                        results.push({ title: json?.title?.simpleText, videos: reels });
 
                     } else if (item.playlistRenderer) {
 
@@ -260,7 +260,7 @@ export const GetListByKeyword = async (
                             isLive: false
                         }
 
-                        results.push({ title: json.title.simpleText, videos: playlist });
+                        results.push({ title: json?.title?.simpleText, videos: playlist });
 
                     } else {
                         let videoRender = item.videoRenderer;
@@ -770,12 +770,12 @@ export const GetVideoDetails = async (videoId) => {
             channelOwner.badges.length > 0 &&
             channelOwner.badges[0].metadataBadgeRenderer &&
             channelOwner.badges[0].metadataBadgeRenderer.style ===
-            "OFFICIAL_ARTIST_BADGE"
+            "BADGE_STYLE_TYPE_VERIFIED_ARTIST"
         ) {
             artist = true;
         }
 
-        
+
         let verified = false;
         if (
             channelOwner.badges &&
