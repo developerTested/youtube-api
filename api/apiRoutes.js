@@ -2,7 +2,7 @@ const apiList = {
     trending: '/feed/trending',
     shopping: '/channel/UCkYQyvc_i9hXEo4xic9Hh2g',
     music: '/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ',
-    movies: '/feed/storefront?bp=ogUCKAI%3D',
+    movies: '/feed/storefront?bp=EgCSAQMI4gKiBQIoBQ%3D%3D',
     live: '/channel/UC4R8DWoMoI7CAwX8_LjQHig',
     gaming: '/gaming',
     news: '/channel/UCYfdidRxbB8Qhf0Nx7ioOYw',

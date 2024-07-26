@@ -3,8 +3,6 @@ import videoRenderer from "./videoRenderer.js";
 
 export default function feedParser(json) {
 
-    // console.log(json);
-
     let list = []
     if (json?.horizontalListRenderer) {
         const listItems = json.horizontalListRenderer.items;
@@ -18,8 +16,8 @@ export default function feedParser(json) {
 
                 let playListId = null;
 
-                if(playList) {
-                    const params =  new URL('https://www.youtube.com' + playList).searchParams;
+                if (playList) {
+                    const params = new URL('https://www.youtube.com' + playList).searchParams;
 
                     playListId = params.get('list');
                 }
@@ -219,53 +217,7 @@ export default function feedParser(json) {
         const listItems = json.gridRenderer.items;
 
         listItems.length ? listItems.map((x) => {
-
-            if (x.gridVideoRenderer) {
-                list.push(cardParser(x));
-            } else if (x.videoCardRenderer) {
-                list.push(cardParser(x));
-            } else if (x.gridChannelRenderer) { // Channel List Parser
-                const json = x.gridChannelRenderer;
-
-                let artist = false;
-                if (
-                    json.ownerBadges &&
-                    json.ownerBadges.length > 0 &&
-                    json.ownerBadges[0].metadataBadgeRenderer &&
-                    ["OFFICIAL_ARTIST_BADGE", "BADGE_STYLE_TYPE_VERIFIED_ARTIST"]
-                        .includes(json.ownerBadges[0].metadataBadgeRenderer.style)
-                ) {
-                    artist = true;
-                }
-
-                let verified = false;
-                if (
-                    json.ownerBadges &&
-                    json.ownerBadges.length > 0 &&
-                    json.ownerBadges[0].metadataBadgeRenderer &&
-                    json.ownerBadges[0].metadataBadgeRenderer.style ===
-                    "BADGE_STYLE_TYPE_VERIFIED"
-                ) {
-                    verified = true;
-                }
-
-                const channelUrl = json.navigationEndpoint.commandMetadata.webCommandMetadata.url;
-
-                const channel = {
-                    id: json?.channelId,
-                    type: 'channel',
-                    title: json?.title?.simpleText,
-                    url: channelUrl ? channelUrl?.replace('/@', '/channel/') : '',
-                    avatar: json?.thumbnail?.thumbnails?.pop(),
-                    videos: json?.videoCountText?.runs?.map((x) => x.text).join(''),
-                    subscribers: json?.subscriberCountText?.simpleText,
-                    verified,
-                    artist,
-                };
-
-                list.push(channel);
-            }
-
+            list.push(cardParser(x));
         }) : ''
     }
 
@@ -314,7 +266,7 @@ function gridVideoRenderer(json) {
         id: json.videoId,
         type: "video",
         title: json.title?.simpleText,
-        thumbnails: json.thumbnail?.thumbnails,
+        thumbnail: json.thumbnail?.thumbnails?.pop(),
         publishedAt: json?.publishedTimeText?.simpleText,
         views: json?.shortViewCountText?.simpleText,
         channel,

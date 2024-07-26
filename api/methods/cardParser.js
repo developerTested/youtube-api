@@ -45,7 +45,7 @@ export default function cardParser(response) {
             id: json.videoId,
             type: "video",
             title: json.title?.runs?.map((x) => x.text).join(''),
-            thumbnails: json.thumbnail?.thumbnails,
+            thumbnail: json.thumbnail?.thumbnails?.pop(),
             views: json?.metadataText?.simpleText,
             length: json?.lengthText?.simpleText,
             channel,
@@ -94,7 +94,7 @@ export default function cardParser(response) {
             id: json.videoId,
             type: "video",
             title: json.title?.simpleText,
-            thumbnails: json.thumbnail?.thumbnails,
+            thumbnail: json.thumbnail?.thumbnails?.pop(),
             publishedAt: json?.publishedTimeText?.simpleText,
             views: json?.shortViewCountText?.simpleText,
             channel,
@@ -102,7 +102,7 @@ export default function cardParser(response) {
     } else if (response?.gridVideoRenderer) {
 
         const json = response.gridVideoRenderer;
-        
+
         if (!json?.videoId) {
             return {};
         }
@@ -150,10 +150,10 @@ export default function cardParser(response) {
             channel,
             views: json?.shortViewCountText?.simpleText,
             publishedAt: json?.publishedTimeText?.simpleText,
-            thumbnails: json?.thumbnail?.thumbnails,
+            thumbnail: json?.thumbnail?.thumbnails?.pop(),
         };
 
-    } else if(response?.gridPlaylistRenderer) {
+    } else if (response?.gridPlaylistRenderer) {
         const json = response.gridPlaylistRenderer;
 
         const channelGet = json?.shortBylineText?.runs;
@@ -174,6 +174,25 @@ export default function cardParser(response) {
             videos: json?.videoCountShortText?.simpleText,
             videoCount: json?.videoCountText?.runs?.map((x) => x.text).join(''),
         }
+    } else if (response?.gridMovieRenderer) {
 
+        const json = response.gridMovieRenderer;
+
+        let badges = [];
+        if (
+            json.badges &&
+            json.badges.length > 0) {
+            badges = json.badges.map((x) => x.metadataBadgeRenderer.label);
+        }
+
+        return {
+            id: json.videoId,
+            type: "movie",
+            title: json.title?.runs?.map((x) => x.text).join(''),
+            length: json.lengthText?.simpleText,
+            category: json?.metadata?.simpleText,
+            thumbnail: json?.thumbnail?.thumbnails[0],
+            badges,
+        };
     }
 }

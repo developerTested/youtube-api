@@ -90,7 +90,7 @@ export default function videoRenderer(response) {
             length: response.lengthText?.simpleText,
             views: viewsCount,
             publishedAt: isLive ? response?.dateText?.simpleText : response?.publishedTimeText?.simpleText,
-            thumbnails: response?.thumbnail?.thumbnails,
+            thumbnail: response?.thumbnail?.thumbnails?.pop(),
             isLive,
             badges,
         };

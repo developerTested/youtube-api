@@ -797,7 +797,7 @@ export const GetVideoDetails = async (videoId) => {
             artist,
         }
 
-        const player = getVideoData(playerData);
+        const player = getVideoDataForPlayer(playerData);
 
         const res = {
             id: videoId,
@@ -1288,7 +1288,7 @@ export const VideoRender = (json) => {
                 });
             }
             const id = videoRenderer.videoId;
-            const thumbnails = videoRenderer.thumbnail;
+            const thumbnails = videoRenderer.thumbnail?.pop();
             const title = videoRenderer.title.runs[0].text;
             const shortBylineText = videoRenderer.shortBylineText ? videoRenderer.shortBylineText : "";
             const lengthText = videoRenderer.lengthText ? videoRenderer.lengthText : "";
@@ -1299,7 +1299,7 @@ export const VideoRender = (json) => {
             return {
                 id,
                 type: "video",
-                ...thumbnails,
+                thumbnail: thumbnails,
                 title,
                 channelTitle,
                 shortBylineText,
@@ -1383,8 +1383,8 @@ export const compactVideoRenderer = (json) => {
     const result = {
         id: compactVideoRendererJson.videoId,
         type: "video",
-        thumbnails: compactVideoRendererJson.thumbnail.thumbnails,
         title: compactVideoRendererJson.title?.simpleText,
+        thumbnail: compactVideoRendererJson.thumbnail.thumbnails?.pop(),
         channel,
         length: compactVideoRendererJson?.lengthText?.simpleText,
         views: viewsCount,
@@ -1510,7 +1510,7 @@ export async function getFeed(name) {
 
         const itemSectionContent = itemSectionRenderer.filter((x) => x)?.map((x) => x.contents)?.flat();
 
-        itemSectionContent.map((x) => {
+        itemSectionContent.length && itemSectionContent.map((x) => {
 
             if (x.horizontalCardListRenderer) {
 
@@ -1660,7 +1660,7 @@ export const GetShortVideo = async () => {
  * @param {*} response 
  * @returns 
  */
-function getVideoData(response) {
+function getVideoDataForPlayer(response) {
 
     if (!response) {
         return {};
@@ -1675,7 +1675,7 @@ function getVideoData(response) {
         const player = {
             id: videoDetails.videoId,
             title: videoDetails.title,
-            thumbnails: videoDetails.thumbnail.thumbnails,
+            thumbnail: videoDetails.thumbnail.thumbnails?.pop(),
             shortDescription: videoDetails.shortDescription,
             length: videoDetails.lengthSeconds,
             keywords: videoDetails.keywords,
@@ -1808,7 +1808,7 @@ export function parseVideoRender(response) {
             length: response.lengthText?.simpleText,
             views: viewsCount,
             publishedAt: isLive ? response?.dateText?.simpleText : response?.publishedTimeText?.simpleText,
-            thumbnails: response?.thumbnail?.thumbnails,
+            thumbnail: response?.thumbnail?.thumbnails?.pop(),
             isLive,
             badges,
         };
