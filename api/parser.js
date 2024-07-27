@@ -1,6 +1,6 @@
 import axios from "axios";
 import apiList from "./apiRoutes.js";
-import gridParser from "./methods/gridParser.js";
+import gridVideoRenderer from "./methods/gridVideoRenderer.js";
 import playListParser from "./methods/playListParser.js";
 import channelParser from "./methods/channelParser.js";
 import playListVideoItemRender from "./methods/playListVideoItemRender.js";
@@ -478,7 +478,6 @@ export const GetChannelById = async (channelId) => {
         const metadata = page.initData.metadata.channelMetadataRenderer;
         const channelHeader = page.initData.header.pageHeaderRenderer.content.pageHeaderViewModel;
 
-
         let fullDescription = null;
 
         const getDescriptionToken = channelHeader?.description?.descriptionPreviewViewModel?.rendererContext?.commandContext?.onTap?.innertubeCommand?.showEngagementPanelEndpoint?.engagementPanel?.engagementPanelSectionListRenderer?.content?.sectionListRenderer?.contents[0]?.itemSectionRenderer?.contents[0]?.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token;
@@ -560,8 +559,6 @@ export const GetChannelById = async (channelId) => {
                 .map((x) => x?.sectionListRenderer?.contents).flat()
                 .map((y) => y?.itemSectionRenderer?.contents).flat();
 
-
-
             items.length > 0 && items.map((x) => {
 
                 if (x.channelFeaturedContentRenderer) {
@@ -584,9 +581,9 @@ export const GetChannelById = async (channelId) => {
 
                         itemList.map((x) => {
                             if (x.gridVideoRenderer) {
-                                b.push(gridParser(x, channel));
+                                b.push(gridVideoRenderer(x.gridVideoRenderer));
                             } else if (x.gridPlaylistRenderer) {
-                                b.push(playListParser(x));
+                                b.push(playListParser(x, channel));
                             } else if (x.gridChannelRenderer) {
                                 b.push(channelParser(x.gridChannelRenderer))
                             }
@@ -844,11 +841,18 @@ export const getComments = async (nextPage) => {
 
         const commentCounts = commentHeader?.countText?.runs?.map(x => x.text).join('');
 
+        const findTokenContainer = response[1]?.reloadContinuationItemsCommand?.continuationItems?.find(x => x.continuationItemRenderer)
+
+        if (findTokenContainer) {
+            const continuationToken = findTokenContainer.continuationItemRenderer.continuationEndpoint.continuationCommand.token
+            nextPage.nextPageContext.continuation = continuationToken;
+        }
+
         let commentKeys = [];
 
         try {
             commentKeys = response[1]?.reloadContinuationItemsCommand.continuationItems.filter((x) => x.commentThreadRenderer).map((x) => {
-                const reply = x.commentThreadRenderer.replies || null;
+                const reply = x.commentThreadRenderer.replies || undefined;
                 const c = x.commentThreadRenderer.commentViewModel.commentViewModel;
 
                 let token = null;
@@ -927,8 +931,6 @@ export const getComments = async (nextPage) => {
 
                 items.push(commentItem);
 
-            } else if (conitem.continuationItemRenderer) {
-                nextPage.nextPageContext.continuation = conitem.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
             }
         }
 
@@ -991,7 +993,7 @@ export const getMoreSuggestions = async (nextPage) => {
  */
 export const getMoreComments = async (nextPage) => {
 
-    if (!nextPage?.nextPageToken) return Promise.resolve(nextPage);
+    if (!nextPage?.nextPageToken) return {};
 
     const endpoint = await `${youtubeEndpoint}/youtubei/v1/next?key=${nextPage.nextPageToken}`;
     const items = [];
@@ -1006,12 +1008,17 @@ export const getMoreComments = async (nextPage) => {
 
         if (!response) return [];
 
-        const commentHeader = response[0]?.reloadContinuationItemsCommand?.continuationItems[0]?.commentsHeaderRenderer;
+        const findTokenContainer = response[1]?.appendContinuationItemsAction?.continuationItems?.find(x => x.continuationItemRenderer)
+
+        if (findTokenContainer) {
+            const continuationToken = findTokenContainer.continuationItemRenderer.continuationEndpoint.continuationCommand.token
+            nextPage.nextPageContext.continuation = continuationToken;
+        }
 
         const commentKeys = [];
 
         try {
-            response[1]?.reloadContinuationItemsCommand.continuationItems.filter((x) => x.commentThreadRenderer).map((x) => {
+            response[1]?.appendContinuationItemsAction.continuationItems.filter((x) => x.commentThreadRenderer).map((x) => {
                 const reply = x.commentThreadRenderer.replies || null;
                 const c = x.commentThreadRenderer.commentViewModel.commentViewModel;
 
@@ -1051,7 +1058,7 @@ export const getMoreComments = async (nextPage) => {
                 const artist = commentThread.author.isArtist;
 
                 const foundToken = commentKeys.length ? commentKeys.find((x) => x.id === comment.commentId) : undefined
-                const repliesToken = foundToken?.replyToken || null;
+                const repliesToken = foundToken?.replyToken;
 
                 const channelUrl = commentThread.author.channelCommand.innertubeCommand.commandMetadata.webCommandMetadata.url?.replace('/', '');
 
@@ -1091,8 +1098,6 @@ export const getMoreComments = async (nextPage) => {
 
                 items.push(commentItem);
 
-            } else if (conitem.continuationItemRenderer) {
-                nextPage.nextPageContext.continuation = conitem.continuationItemRenderer.continuationEndpoint.continuationCommand.token;
             }
         }
 
@@ -1123,14 +1128,14 @@ async function getCommentReplies(nextPage) {
 
         if (!response) return [];
 
-        const commentHeader = response[0]?.reloadContinuationItemsCommand?.continuationItems[0]?.commentsHeaderRenderer;
+        const commentHeader = response[0]?.appendContinuationItemsAction?.continuationItems[0]?.commentsHeaderRenderer;
 
         const commentCounts = commentHeader?.countText?.runs?.map(x => x.text).join('');
 
         const commentKeys = [];
 
         try {
-            response[1]?.reloadContinuationItemsCommand.continuationItems.filter((x) => x.commentThreadRenderer).map((x) => {
+            response[1]?.appendContinuationItemsAction.continuationItems.filter((x) => x.commentThreadRenderer).map((x) => {
                 const reply = x.commentThreadRenderer.replies || null;
                 const c = x.commentThreadRenderer.commentViewModel.commentViewModel;
 
@@ -1162,8 +1167,6 @@ async function getCommentReplies(nextPage) {
             const commentThread = conitem.payload.commentEntityPayload;
 
             if (commentThread) {
-
-
 
                 const comment = commentThread.properties;
                 const commentStats = commentThread.toolbar;
