@@ -567,7 +567,7 @@ export const GetChannelById = async (channelId) => {
                     json.items.map((x) => featuredItems.push(parseVideoRender(x.videoRenderer)));
 
                     results.push({
-                        title: json.title?.runs.map((x) => x.text).join('') ?? null,
+                        title: json.title?.runs?.map((x) => x.text)?.join(''),
                         videos: featuredItems,
                     })
                 }
@@ -602,7 +602,7 @@ export const GetChannelById = async (channelId) => {
                         });
                     }
 
-                    results.push({ title: json.title.runs.map((x) => x.text).join(''), videos: b });
+                    results.push({ title: json?.title?.runs?.map((x) => x.text)?.join(''), videos: b });
 
                 }
 
@@ -618,7 +618,7 @@ export const GetChannelById = async (channelId) => {
                         });
                     }
 
-                    results.push({ title: json.title.runs.map((x) => x.text).join(''), videos: reels });
+                    results.push({ title: json?.title.runs?.map((x) => x.text)?.join(''), videos: reels });
                 }
 
             });
@@ -631,6 +631,7 @@ export const GetChannelById = async (channelId) => {
 
         return await Promise.resolve(channelJson);
     } catch (ex) {
+        console.log(ex);
         return await Promise.reject(ex);
     }
 };
