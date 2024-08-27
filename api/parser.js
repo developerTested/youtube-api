@@ -50,7 +50,7 @@ export const GetYoutubeInitData = async (url) => {
 
             initData = await JSON.parse(data);
 
-            if (ytPlayerData && ytPlayerData.length > 1) {
+            if (playerResponse && playerResponse.length > 1) {
                 playerData = await JSON.parse(playerResponse);
             }
 
@@ -707,7 +707,7 @@ export const GetVideoDetails = async (videoId) => {
         const page = await GetYoutubeInitData(endpoint);
 
         const result = await page.initData.contents.twoColumnWatchNextResults;
-        const playerData = await page.playerData;
+        const playerData = page.playerData;
 
         let videoInfo = null, channelInfo = null, contToken = null;
 
@@ -1127,7 +1127,7 @@ async function getCommentReplies(nextPage) {
 
         const response = page.data.onResponseReceivedEndpoints;
 
-        if (!response) return [];
+        if (!response || response && !response[0]?.appendContinuationItemsAction?.continuationItems) return [];
 
         const commentHeader = response[0]?.appendContinuationItemsAction?.continuationItems[0]?.commentsHeaderRenderer;
 
@@ -1710,6 +1710,7 @@ function getVideoDataForPlayer(response) {
         return player;
 
     } catch (error) {
+        console.log(error);
         return {};
     }
 }
