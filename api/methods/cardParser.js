@@ -1,3 +1,5 @@
+import channelParser from "./channelParser.js";
+
 export default function cardParser(response) {
 
     if (response?.videoCardRenderer) {
@@ -194,5 +196,7 @@ export default function cardParser(response) {
             thumbnail: json?.thumbnail?.thumbnails[0],
             badges,
         };
+    } else if (response?.gridChannelRenderer){
+        return channelParser(response.gridChannelRenderer);
     }
 }

@@ -3,7 +3,8 @@ import videoRenderer from "./videoRenderer.js";
 
 export default function feedParser(json) {
 
-    let list = []
+    let list = [];
+    
     if (json?.horizontalListRenderer) {
         const listItems = json.horizontalListRenderer.items;
 
