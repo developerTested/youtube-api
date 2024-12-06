@@ -1666,26 +1666,25 @@ export const GetShortVideo = async () => {
  */
 function getVideoDataForPlayer(response) {
 
-    if (!response) {
-        return {};
+    if (!response?.videoDetails) {
+        return response;
     }
 
     try {
-
-        const microFormat = response.microformat.playerMicroformatRenderer;
-        const videoDetails = response.videoDetails;
-        const adaptiveFormats = response.streamingData.adaptiveFormats;
-        const formats = response.streamingData.formats;
+        const microFormat = response?.microformat?.playerMicroformatRenderer;
+        const videoDetails = response?.videoDetails;
+        const adaptiveFormats = response?.streamingData?.adaptiveFormats;
+        const formats = response?.streamingData?.formats;
         const player = {
-            id: videoDetails.videoId,
-            title: videoDetails.title,
-            thumbnail: videoDetails.thumbnail.thumbnails?.pop(),
-            shortDescription: videoDetails.shortDescription,
-            length: videoDetails.lengthSeconds,
-            keywords: videoDetails.keywords,
-            category: microFormat.category,
-            publishDate: microFormat.publishDate,
-            embed: microFormat.embed,
+            id: videoDetails?.videoId,
+            title: videoDetails?.title,
+            thumbnail: videoDetails?.thumbnail?.thumbnails?.pop(),
+            shortDescription: videoDetails?.shortDescription,
+            length: videoDetails?.lengthSeconds,
+            keywords: videoDetails?.keywords,
+            category: microFormat?.category,
+            publishDate: microFormat?.publishDate,
+            embed: microFormat?.embed,
             media: [],
             formats,
             adaptiveFormats,
@@ -1693,17 +1692,17 @@ function getVideoDataForPlayer(response) {
 
         formats.length && formats.map((x) => {
 
-            const mime = x.mimeType?.split(/\/(.*?);/u);
-            const parsedUrl = x.url ?? decodeURI(x?.signatureCipher?.split('&url=')[1] ?? '');
+            const mime = x?.mimeType?.split(/\/(.*?);/u);
+            const parsedUrl = x?.url ?? decodeURI(x?.signatureCipher?.split('&url=')[1] ?? '');
 
             player.media.push({
                 url: parsedUrl,
-                hls: videoDetails.isLive ? response.streamingData.hlsManifestUrl : null,
+                hls: videoDetails.isLive ? response?.streamingData?.hlsManifestUrl : null,
                 fileType: mime[1] ?? null,
                 type: mime.includes('audio') ? 'audio' : 'video',
-                label: x.qualityLabel ?? x?.quality,
-                width: x.width,
-                height: x.height,
+                label: x?.qualityLabel ?? x?.quality,
+                width: x?.width,
+                height: x?.height,
             })
         })
 
