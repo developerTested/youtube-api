@@ -1,4 +1,5 @@
-import { parseVideoRender } from "../parser.js";
+
+import { parseVideoRender } from "../utils/parser.js";
 import shortVideoParser from "./shortVideoParser.js";
 
 export default function richSessionParse(json) {

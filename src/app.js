@@ -1,14 +1,14 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from "dotenv"
-import apiRouter from './api/router.js';
-import ApiError from './api/apiError.js';
+import apiRouter from './routes/router.js';
+import ApiError from './utils/apiError.js';
 
 // Load .env file
 dotenv.config();
 
 // Get Port from .env file
-const port = process.env.PORT || 3000;
+export const port = process.env.PORT || 3000;
 const host_name = process.env.HOST_NAME || 'localhost'
 
 // Cors settings
@@ -22,11 +22,11 @@ const corsOptions = {
 
 
 // Initialize Express
-const app = express();
+export const app = express();
 
 app.use(cors(corsOptions));
-app.use(express.json());
-
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 /**
  * Routes
@@ -57,6 +57,11 @@ app.get('/', function (req, res) {
   })
 });
 
+
+app.get('/ping', (_, res) => {
+  return res.send('pong 🏓')
+})
+
 app.use('/api/', apiRouter);
 
 /**
@@ -71,15 +76,7 @@ app.use((err, req, res, next) => {
 */
 app.use("*", function (req, res) {
   return res.status(404).json({
-      success: false,
-      message: "Page not found",
+    success: false,
+    message: "Page not found",
   })
 })
-
-
-// Express server config
-app.listen(port, () => {
-  console.log('Express server is listening on port %d in %s mode', port, app.settings.env);
-});
-
-export default app;

@@ -10,7 +10,7 @@ import {
   GetPlaylistData,
   getFeed,
   GetHomeFeed
-} from "./parser.js"
+} from "../utils/parser.js"
 
 
 const apiRouter = Router();
@@ -19,6 +19,13 @@ const apiRouter = Router();
  * Heath check
  */
 apiRouter.get('/ping', function (req, res, next) {
+  return res.json("pong")
+})
+
+/**
+ * Heath check
+ */
+apiRouter.get('/healthcheck', function (req, res, next) {
   return res.json("pong")
 })
 

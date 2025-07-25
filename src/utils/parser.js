@@ -1,13 +1,13 @@
 import axios from "axios";
-import apiList from "./apiRoutes.js";
-import gridVideoRenderer from "./methods/gridVideoRenderer.js";
-import playListParser from "./methods/playListParser.js";
-import channelParser from "./methods/channelParser.js";
-import playListVideoItemRender from "./methods/playListVideoItemRender.js";
-import richSessionParse from "./methods/richSessionParse.js";
-import parsePostRenderer from "./methods/parsePostRenderer.js";
-import feedParser from "./methods/feedParser.js";
-import shortVideoParser from "./methods/shortVideoParser.js";
+import apiList from "../routes/apiRoutes.js";
+import gridVideoRenderer from "../methods/gridVideoRenderer.js";
+import playListParser from "../methods/playListParser.js";
+import channelParser from "../methods/channelParser.js";
+import playListVideoItemRender from "../methods/playListVideoItemRender.js";
+import richSessionParse from "../methods/richSessionParse.js";
+import parsePostRenderer from "../methods/parsePostRenderer.js";
+import feedParser from "../methods/feedParser.js";
+import shortVideoParser from "../methods/shortVideoParser.js";
 import ApiError from "./apiError.js";
 
 const youtubeEndpoint = `https://www.youtube.com`;
@@ -51,7 +51,7 @@ export const GetYoutubeInitData = async (url) => {
             initData = await JSON.parse(data);
 
             if (playerResponse && playerResponse.length > 1) {
-                playerData = await JSON.parse(playerResponse);
+                playerData = await JSON.parse(playerResponse);                
             }
 
             return await Promise.resolve({ initData, playerData, apiToken, context });
@@ -810,7 +810,6 @@ export const GetVideoDetails = async (videoId) => {
             suggestionContext: suggestionNextPage,
             isLive,
             commentContext: nextPage,
-            comments: await getComments(nextPage) ?? [],
         }
 
         return await Promise.resolve(res);
