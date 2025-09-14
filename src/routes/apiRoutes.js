@@ -1,5 +1,5 @@
 const apiList = {
-    trending: '/feed/trending',
+    // trending: '/feed/trending', // Youtube removed it
     shopping: '/channel/UCkYQyvc_i9hXEo4xic9Hh2g',
     music: '/channel/UC-9-kyTW8ZkZNDHQJ6FgpwQ',
     movies: '/feed/storefront?bp=EgCSAQMI4gKiBQIoBQ%3D%3D',
